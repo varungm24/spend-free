@@ -102,6 +102,38 @@ SpendFree follows a modern reactive architecture:
 
 ---
 
+## 🚀 Deployment
+
+SpendFree is designed to be easily deployed using modern cloud platforms.
+
+### 1. Backend (Convex)
+
+Deploy your backend functions and database schema to the Convex production environment:
+
+```bash
+npx convex deploy
+```
+
+This will provide you with a production Convex URL (e.g., `https://happy-monkey-123.convex.cloud`).
+
+### 2. Authentication (Clerk)
+
+1. Go to your [Clerk Dashboard](https://dashboard.clerk.com/).
+2. Create a production instance or use your existing one.
+3. Update your production `VITE_CLERK_PUBLISHABLE_KEY`.
+
+### 3. Frontend (Vercel / Netlify)
+
+We recommend **Vercel** for the smoothest experience with Vite and React.
+
+1. Connect your GitHub repository to Vercel.
+2. Configure the following **Environment Variables** in the Vercel dashboard:
+   - `VITE_CONVEX_URL`: Your production Convex URL.
+   - `VITE_CLERK_PUBLISHABLE_KEY`: Your production Clerk Publishable Key.
+3. Click **Deploy**.
+
+---
+
 ## 📜 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
