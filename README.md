@@ -20,13 +20,13 @@
 
 ## ✨ Key Features
 
-- 💎 **Premium Aesthetic**: Modern, glass-morphism UI with fluid animations using Framer Motion.
-- 🌓 **Adaptive Themes**: Seamless dark and light mode support with system preference synchronization.
-- 📱 **PWA Support**: Install SpendFree as a native application on mobile or desktop for an integrated experience.
-- 🛠️ **Smart Schema**: Completely customizable spending taxonomy including banks, cards, and categories.
-- 🔐 **Privacy First**: Secure authentication powered by Clerk, ensuring your data remains your own.
-- 📊 **Real-time Velocity**: Live analytics and charts (Recharts) to track your monthly burn and capital efficiency.
-- ⚡ **Blazing Fast**: Engineered with Vite for near-instant load times and HMR functionality.
+- 💎 **Premium Aesthetic**: Modern, glass-morphism UI with fluid animations using GSAP and Framer Motion.
+- 📈 **Advanced Analytics**: Real-time spending trends, Month-on-Month performance comparisons, and payment distribution charts.
+- 🎯 **Global Budgeting**: A simplified, single-target monthly budgeting system designed for high-level financial control.
+- 🌓 **Adaptive Themes**: Seamless dark and light mode support with curated, high-contrast color palettes.
+- 📱 **PWA Support**: Install SpendFree as a native application for a lightning-fast desktop/mobile experience.
+- 🔐 **Secure & Private**: Enterprise-grade authentication via Clerk, keeping your financial narrative private.
+- ⚡ **Vite Powered**: Built for speed with sub-second load times and a reactive architecture.
 
 ## 🛠️ Tech Stack
 
