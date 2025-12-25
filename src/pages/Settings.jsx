@@ -15,6 +15,16 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 export default function Settings() {
   const { user } = useUser();
@@ -22,7 +32,11 @@ export default function Settings() {
   const updateSettings = useMutation(api.users.updateSettings);
 
   const [newBank, setNewBank] = useState("");
-  const [newCard, setNewCard] = useState({ name: "", bank: "" });
+  const [newCard, setNewCard] = useState({
+    name: "",
+    bank: "",
+    type: "Credit",
+  });
   const [newCategory, setNewCategory] = useState("");
   const [status, setStatus] = useState(null);
 
@@ -40,10 +54,14 @@ export default function Settings() {
 
   const handleUpdate = async (updates) => {
     try {
+      const sanitizedCards = (updates.creditCards || settings.creditCards).map(
+        ({ name, bank, type }) => ({ name, bank, type })
+      );
+
       await updateSettings({
         userId: user.id,
         banks: updates.banks || settings.banks,
-        creditCards: updates.creditCards || settings.creditCards,
+        creditCards: sanitizedCards,
         categories: updates.categories || settings.categories,
       });
       setStatus({ type: "success", message: "Preferences synchronized" });
@@ -75,10 +93,7 @@ export default function Settings() {
 
       if (type === "bank") {
         const filteredBanks = settings.banks.filter((b) => b !== item);
-        const filteredCards = settings.creditCards.filter(
-          (c) => c.bank !== item
-        );
-        handleUpdate({ banks: filteredBanks, creditCards: filteredCards });
+        handleUpdate({ banks: filteredBanks });
       } else if (type === "card") {
         const filteredCards = settings.creditCards.filter(
           (c) => c.name !== item.name
@@ -143,23 +158,24 @@ export default function Settings() {
           </div>
           <div className="space-y-4">
             <div className="flex gap-2 p-1.5 bg-secondary/50 rounded-2xl border border-border">
-              <input
+              <Input
                 value={newBank}
                 onChange={(e) => setNewBank(e.target.value)}
                 placeholder="New Bank"
-                className="flex-1 bg-transparent border-none outline-none px-3 py-1 font-bold text-sm"
+                className="flex-1 bg-transparent border-none outline-none px-3 py-1 font-bold text-sm shadow-none focus-visible:ring-0"
               />
-              <button
+              <Button
+                size="icon"
                 onClick={() => {
                   if (newBank) {
                     handleUpdate({ banks: [...settings.banks, newBank] });
                     setNewBank("");
                   }
                 }}
-                className="bg-foreground text-background p-2 rounded-xl shadow-md"
+                className="rounded-xl shadow-md h-9 w-9"
               >
                 <Plus size={18} />
-              </button>
+              </Button>
             </div>
             <div className="space-y-2">
               {settings.banks.map((bank) => (
@@ -189,44 +205,82 @@ export default function Settings() {
             <h3 className="text-xl font-bold">Cards</h3>
           </div>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <input
-                value={newCard.name}
-                onChange={(e) =>
-                  setNewCard({ ...newCard, name: e.target.value })
-                }
-                placeholder="Card Label"
-                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3 font-bold text-sm"
-              />
-              <div className="flex gap-2">
-                <select
-                  value={newCard.bank}
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                  Card Name / Label
+                </Label>
+                <Input
+                  value={newCard.name}
                   onChange={(e) =>
-                    setNewCard({ ...newCard, bank: e.target.value })
+                    setNewCard({ ...newCard, name: e.target.value })
                   }
-                  className="flex-1 bg-secondary/50 border border-border rounded-xl px-4 py-3 outline-none text-sm font-bold appearance-none"
-                >
-                  <option value="">Select Bank</option>
-                  {settings.banks.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => {
-                    if (newCard.name && newCard.bank) {
-                      handleUpdate({
-                        creditCards: [...settings.creditCards, newCard],
-                      });
-                      setNewCard({ name: "", bank: "" });
-                    }
-                  }}
-                  className="bg-foreground text-background px-6 rounded-xl font-black text-sm"
-                >
-                  Add
-                </button>
+                  placeholder="e.g. My Shopping Card"
+                  className="bg-secondary/50 border-border font-bold text-sm h-11 rounded-xl"
+                />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                    Card Type
+                  </Label>
+                  <Select
+                    value={newCard.type}
+                    onValueChange={(val) =>
+                      setNewCard({ ...newCard, type: val })
+                    }
+                  >
+                    <SelectTrigger className="bg-secondary/50 border-border font-bold text-sm h-11 rounded-xl">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Credit">Credit Card</SelectItem>
+                      <SelectItem value="Debit">Debit Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                    Issuing Bank
+                  </Label>
+                  <Select
+                    value={newCard.bank}
+                    onValueChange={(val) =>
+                      setNewCard({ ...newCard, bank: val })
+                    }
+                  >
+                    <SelectTrigger className="bg-secondary/50 border-border font-bold text-sm h-11 rounded-xl">
+                      <SelectValue placeholder="Select Bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {settings.banks.map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => {
+                  if (newCard.name && newCard.bank && newCard.type) {
+                    handleUpdate({
+                      creditCards: [...settings.creditCards, newCard],
+                    });
+                    setNewCard({
+                      name: "",
+                      bank: "",
+                      type: "Credit",
+                    });
+                  }
+                }}
+                className="h-11 px-8 rounded-xl font-black text-sm"
+              >
+                Add Card
+              </Button>
             </div>
             <div className="space-y-2">
               {settings.creditCards.map((card) => (
@@ -235,8 +289,13 @@ export default function Settings() {
                   className="flex items-center justify-between bg-card border border-border p-4 rounded-2xl group hover:shadow-md transition-shadow"
                 >
                   <div>
-                    <p className="font-bold">{card.name}</p>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground leading-none">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{card.name}</span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        {card.type}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground leading-none mt-1">
                       {card.bank}
                     </p>
                   </div>
@@ -262,13 +321,14 @@ export default function Settings() {
               <h3 className="text-xl font-bold">Categories</h3>
             </div>
             <div className="flex gap-2 p-1.5 bg-secondary/50 rounded-2xl border border-border w-64">
-              <input
+              <Input
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="New Category"
-                className="flex-1 bg-transparent border-none outline-none px-3 py-1 font-bold text-sm"
+                className="flex-1 bg-transparent border-none outline-none px-3 py-1 font-bold text-sm shadow-none focus-visible:ring-0"
               />
-              <button
+              <Button
+                size="icon"
                 onClick={() => {
                   if (newCategory) {
                     handleUpdate({
@@ -277,10 +337,10 @@ export default function Settings() {
                     setNewCategory("");
                   }
                 }}
-                className="bg-foreground text-background p-2 rounded-xl shadow-md"
+                className="rounded-xl shadow-md h-9 w-9"
               >
                 <Plus size={18} />
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">

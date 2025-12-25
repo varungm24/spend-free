@@ -46,6 +46,23 @@ export const deleteExpense = mutation({
   },
 });
 
+export const update = mutation({
+  args: {
+    id: v.id("expenses"),
+    date: v.optional(v.string()),
+    categoryId: v.optional(v.string()),
+    description: v.optional(v.string()),
+    amount: v.optional(v.number()),
+    paymentType: v.optional(v.string()),
+    sourceId: v.optional(v.string()),
+    transactionType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    await ctx.db.patch(id, updates);
+  },
+});
+
 export const getBySource = query({
   args: { sourceId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {

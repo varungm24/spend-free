@@ -2,17 +2,19 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import {
-  X,
-  Calendar as CalIcon,
-  IndianRupee,
-  Tag,
-  Info,
-  Wallet,
-  CreditCard as CardIcon,
-} from "lucide-react";
+import { X } from "lucide-react";
 import useStore from "../store/useStore";
 import { format } from "date-fns";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export default function ExpenseForm() {
   const { user } = useUser();
@@ -25,8 +27,9 @@ export default function ExpenseForm() {
     categoryId: "",
     description: "",
     amount: "",
-    paymentType: "UPI", // UPI, Credit Card, Cash
-    sourceId: "",
+    paymentType: "UPI", // UPI, Card, Cash
+    sourceId: "", // Bank, or Card ID
+    cardType: "Credit", // Credit, Debit
     transactionType: "Debit", // Debit, Credit
   });
 
@@ -79,12 +82,14 @@ export default function ExpenseForm() {
   };
 
   const getSourceOptions = () => {
-    if (formData.paymentType === "Credit Card") {
+    if (formData.paymentType === "Card") {
       return (
-        settings?.creditCards.map((c) => ({
-          id: c.name,
-          label: `${c.name} (${c.bank})`,
-        })) || []
+        settings?.creditCards
+          .filter((c) => c.type === formData.cardType)
+          .map((c) => ({
+            id: c.name,
+            label: `${c.bank} - ${c.name}`,
+          })) || []
       );
     }
     if (formData.paymentType === "UPI") {
@@ -109,186 +114,170 @@ export default function ExpenseForm() {
           {/* Transaction Type Toggle */}
           <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
             {["Debit", "Credit"].map((t) => (
-              <button
+              <Button
                 key={t}
+                variant="ghost"
                 type="button"
                 onClick={() => setFormData({ ...formData, transactionType: t })}
-                className={`flex-1 py-2.5 rounded-xl font-bold transition-all ${
+                className={`flex-1 py-6 rounded-xl font-bold transition-all ${
                   formData.transactionType === t
-                    ? "bg-primary text-primary-foreground shadow-lg"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
                 {t}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">
-                Date
-              </label>
-              <div className="relative">
-                <CalIcon
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={16}
-                />
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, date: e.target.value })
-                  }
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary appearance-none"
-                />
-              </div>
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+                className="bg-white/5 border-white/10 h-12 rounded-xl"
+              />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">
-                Amount (₹)
-              </label>
-              <div className="relative">
-                <IndianRupee
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={16}
-                />
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary"
-                  required
-                />
-              </div>
+              <Label>Amount (₹)</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                className="bg-white/5 border-white/10 h-12 rounded-xl font-bold"
+                required
+              />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-muted-foreground">
-              Category
-            </label>
-            <div className="relative">
-              <Tag
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                size={16}
-              />
-              <select
-                value={formData.categoryId}
-                onChange={(e) =>
-                  setFormData({ ...formData, categoryId: e.target.value })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary appearance-none"
-              >
+            <Label>Category</Label>
+            <Select
+              value={formData.categoryId}
+              onValueChange={(val) =>
+                setFormData({ ...formData, categoryId: val })
+              }
+            >
+              <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                <SelectValue placeholder="Choose Category" />
+              </SelectTrigger>
+              <SelectContent>
                 {settings?.categories.map((cat) => (
-                  <option key={cat} value={cat} className="bg-background">
+                  <SelectItem key={cat} value={cat}>
                     {cat}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-muted-foreground">
-              Description
-            </label>
-            <div className="relative">
-              <Info
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="What was this for?"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary"
-              />
-            </div>
+            <Label>Description</Label>
+            <Input
+              placeholder="What was this for?"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="bg-white/5 border-white/10 h-12 rounded-xl"
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">
-                Method
-              </label>
-              <div className="relative">
-                <Wallet
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={16}
-                />
-                <select
-                  value={formData.paymentType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      paymentType: e.target.value,
-                      sourceId: "",
-                    })
-                  }
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary appearance-none"
-                >
-                  <option value="UPI" className="bg-background">
-                    UPI
-                  </option>
-                  <option value="Credit Card" className="bg-background">
-                    Credit Card
-                  </option>
-                  <option value="Cash" className="bg-background">
-                    Cash
-                  </option>
-                </select>
-              </div>
+              <Label>Method</Label>
+              <Select
+                value={formData.paymentType}
+                onValueChange={(val) =>
+                  setFormData({
+                    ...formData,
+                    paymentType: val,
+                    sourceId: "",
+                  })
+                }
+              >
+                <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                  <SelectValue placeholder="Method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UPI">UPI / Bank</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {formData.paymentType !== "Cash" && (
+            {formData.paymentType === "Card" && (
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-muted-foreground">
-                  Select {formData.paymentType === "UPI" ? "Bank" : "Card"}
-                </label>
-                <div className="relative">
-                  <CardIcon
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    size={16}
-                  />
-                  <select
-                    value={formData.sourceId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sourceId: e.target.value })
-                    }
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 ring-primary appearance-none"
-                    required
-                  >
-                    <option value="">Select</option>
-                    {getSourceOptions().map((opt) => (
-                      <option
-                        key={opt.id}
-                        value={opt.id}
-                        className="bg-background"
-                      >
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Label>Card Type</Label>
+                <Select
+                  value={formData.cardType}
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, cardType: val, sourceId: "" })
+                  }
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Credit">Credit Card</SelectItem>
+                    <SelectItem value="Debit">Debit Card</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
 
-          <button
+          {formData.paymentType !== "Cash" && (
+            <div className="space-y-2">
+              <Label>
+                {formData.paymentType === "UPI" ? "Select Bank" : "Select Card"}
+              </Label>
+              <Select
+                value={formData.sourceId}
+                onValueChange={(val) =>
+                  setFormData({ ...formData, sourceId: val })
+                }
+              >
+                <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                  <SelectValue
+                    placeholder={`Select ${
+                      formData.paymentType === "UPI" ? "Bank" : "Card"
+                    }`}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {getSourceOptions().length > 0 ? (
+                    getSourceOptions().map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-xs text-muted-foreground">
+                      No options found in Settings.
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
+            className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all"
           >
             {isSubmitting ? "Processing..." : "Log Transaction"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

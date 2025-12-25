@@ -112,13 +112,6 @@ export default function AddEntries() {
             </p>
           </div>
         </div>
-        <button className="text-[10px] uppercase tracking-widest font-black text-muted-foreground flex items-center gap-2 hover:text-foreground transition-colors group">
-          View Documentation{" "}
-          <ChevronRight
-            size={12}
-            className="group-hover:translate-x-1 transition-transform"
-          />
-        </button>
       </section>
     </div>
   );

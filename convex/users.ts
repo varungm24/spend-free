@@ -19,6 +19,7 @@ export const updateSettings = mutation({
       v.object({
         name: v.string(),
         bank: v.string(),
+        type: v.string(),
       })
     ),
     categories: v.array(v.string()),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -13,16 +13,36 @@ import {
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 
-export default function BulkExpenseTable({ expenses, onExpensesChange }) {
+const BulkExpenseTable = forwardRef(({ expenses, onExpensesChange }, ref) => {
   const { user } = useUser();
   const settings = useQuery(api.users.getSettings, { userId: user?.id || "" });
   const createExpense = useMutation(api.expenses.create);
   const deleteExpense = useMutation(api.expenses.deleteExpense);
 
+  const updateExpense = useMutation(api.expenses.update);
+
   const [localRows, setLocalRows] = useState([]);
   const [editingCell, setEditingCell] = useState(null); // { rowIndex, field }
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    addCustomRow: (data) => {
+      const newRow = {
+        _id: `new-${Date.now()}`,
+        date: data.date || format(new Date(), "yyyy-MM-dd"),
+        description: data.description || "",
+        categoryId: data.categoryId || settings?.categories[0] || "General",
+        amount: data.amount || 0,
+        paymentType: data.paymentType || "UPI",
+        sourceId: data.sourceId || settings?.banks[0] || "Cash",
+        transactionType: data.transactionType || "Debit",
+        isNew: true,
+      };
+      setLocalRows([newRow, ...localRows]);
+      if (onExpensesChange) onExpensesChange();
+    },
+  }));
 
   // Sync with prop when expenses change (e.g. month change)
   useEffect(() => {
@@ -48,23 +68,41 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
     if (onExpensesChange) onExpensesChange();
   };
 
-  const handleCellEdit = (rowIndex, field, value) => {
+  const handleCellEdit = async (rowIndex, field, value) => {
     const updated = [...localRows];
+    const row = updated[rowIndex];
 
     // If we change paymentType, we might need to reset sourceId
+    let newSourceId = row.sourceId;
     if (field === "paymentType") {
-      if (value === "Credit Card") {
-        updated[rowIndex].sourceId = settings?.creditCards[0]?.name || "";
+      if (value === "Card") {
+        newSourceId = settings?.creditCards[0]?.name || "";
+      } else if (value === "UPI") {
+        newSourceId = settings?.banks[0] || "";
       } else {
-        updated[rowIndex].sourceId = settings?.banks[0] || "Cash";
+        newSourceId = "Cash";
       }
     }
 
-    updated[rowIndex] = { ...updated[rowIndex], [field]: value };
+    updated[rowIndex] = { ...row, [field]: value, sourceId: newSourceId };
     setLocalRows(updated);
+
+    // Auto-save if it's NOT a brand new row (existing expense)
+    if (!row.isNew) {
+      try {
+        await updateExpense({
+          id: row._id,
+          [field]: field === "amount" ? parseFloat(value) : value,
+          ...(field === "paymentType" ? { sourceId: newSourceId } : {}),
+        });
+        if (onExpensesChange) onExpensesChange();
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+      }
+    }
   };
 
-  const saveRow = async (rowIndex) => {
+  const saveNewRow = async (rowIndex) => {
     const row = localRows[rowIndex];
     if (row.isNew) {
       setIsSaving(true);
@@ -110,7 +148,7 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
     setIsSaving(true);
     try {
       for (const id of selectedRows) {
-        if (!id.startsWith("new-")) {
+        if (!id.toString().startsWith("new-")) {
           await deleteExpense({ id });
         }
       }
@@ -129,7 +167,9 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
   const handleKeyDown = (e, rowIndex) => {
     if (e.key === "Enter") {
       setEditingCell(null);
-      saveRow(rowIndex);
+      if (localRows[rowIndex].isNew) {
+        saveNewRow(rowIndex);
+      }
     }
   };
 
@@ -196,7 +236,7 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
                 <th className="px-4 py-4 min-w-[200px]">Description</th>
                 <th className="px-4 py-4 w-32 text-center">Category</th>
                 <th className="px-4 py-4 w-40 text-center">Method</th>
-                <th className="px-4 py-4 w-40 text-center">Bank/Card</th>
+                <th className="px-4 py-4 w-40 text-center">Bank</th>
                 <th className="px-4 py-4 w-32 text-right">Amount</th>
                 <th className="px-4 py-4 w-24 text-center">Type</th>
                 <th className="px-6 py-4 w-16"></th>
@@ -308,7 +348,7 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
                       className="bg-transparent border-none outline-none text-[10px] font-black uppercase cursor-pointer hover:bg-secondary/50 px-2 py-1 rounded-lg w-full"
                     >
                       <option value="UPI">UPI</option>
-                      <option value="Credit Card">Card</option>
+                      <option value="Card">Card</option>
                       <option value="Cash">Cash</option>
                     </select>
                   </td>
@@ -320,19 +360,24 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
                       onChange={(e) =>
                         handleCellEdit(idx, "sourceId", e.target.value)
                       }
-                      className="bg-transparent border-none outline-none text-[10px] font-bold uppercase cursor-pointer hover:bg-secondary/50 px-2 py-1 rounded-lg w-full text-muted-foreground"
+                      disabled={row.paymentType === "Cash"}
+                      className={`bg-transparent border-none outline-none text-[10px] font-bold uppercase cursor-pointer hover:bg-secondary/50 px-2 py-1 rounded-lg w-full text-muted-foreground ${row.paymentType === "Cash" ? "opacity-30 cursor-not-allowed" : ""}`}
                     >
-                      {row.paymentType === "Credit Card"
-                        ? settings?.creditCards.map((c) => (
-                            <option key={c.name} value={c.name}>
-                              {c.name}
-                            </option>
-                          ))
-                        : settings?.banks.map((b) => (
-                            <option key={b} value={b}>
-                              {b}
-                            </option>
-                          ))}
+                      {row.paymentType === "Card" ? (
+                        settings?.creditCards.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.brand} • {c.name} ({c.bank})
+                          </option>
+                        ))
+                      ) : row.paymentType === "UPI" ? (
+                        settings?.banks.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="Cash">Cash</option>
+                      )}
                     </select>
                   </td>
 
@@ -388,7 +433,7 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
                     <div className="flex items-center justify-end gap-2">
                       {row.isNew && (
                         <button
-                          onClick={() => saveRow(idx)}
+                          onClick={() => saveNewRow(idx)}
                           className="text-primary hover:scale-110 transition-transform"
                         >
                           <CheckCircle2 size={18} />
@@ -426,4 +471,6 @@ export default function BulkExpenseTable({ expenses, onExpensesChange }) {
       </div>
     </div>
   );
-}
+});
+
+export default BulkExpenseTable;

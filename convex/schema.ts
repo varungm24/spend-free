@@ -9,6 +9,7 @@ export default defineSchema({
       v.object({
         name: v.string(),
         bank: v.string(),
+        type: v.string(),
       })
     ),
     categories: v.array(v.string()),
@@ -26,4 +27,11 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_date", ["userId", "date"]),
+
+  budgets: defineTable({
+    userId: v.string(),
+    amount: v.number(),
+    month: v.number(),
+    year: v.number(),
+  }).index("by_userId_period", ["userId", "month", "year"]),
 });

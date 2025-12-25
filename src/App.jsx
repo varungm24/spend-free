@@ -6,9 +6,12 @@ import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
 import AddEntries from "./pages/AddEntries";
+import Budget from "./pages/Budget";
 import Layout from "./components/Layout";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
 import {
   Wallet,
   TrendingUp,
@@ -26,9 +29,39 @@ import {
 
 function LandingPage() {
   const { theme, setTheme } = useTheme();
+  const heroRef = useRef(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".hero-content > *", {
+        y: 50,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.2,
+        ease: "power4.out",
+      });
+
+      gsap.from(".feature-card", {
+        scrollTrigger: {
+          trigger: ".feature-card",
+          start: "top 80%",
+        },
+        y: 60,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: "back.out(1.7)",
+      });
+    }, heroRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
+    <div
+      ref={heroRef}
+      className="min-h-screen bg-background text-foreground overflow-hidden relative"
+    >
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -88,12 +121,8 @@ function LandingPage() {
 
       <main className="relative z-10 max-w-7xl mx-auto px-8 pt-20 pb-32">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-10">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
+          <div className="hero-content space-y-10">
+            <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-black uppercase tracking-widest mb-6">
                 <Zap size={14} className="fill-primary" />
                 V1.0 Now Live
@@ -108,14 +137,9 @@ function LandingPage() {
                 interface, maximum insights, and absolute privacy for your
                 financial journey.
               </p>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="flex flex-wrap gap-4"
-            >
+            <div className="flex flex-wrap gap-4">
               <SignInButton mode="modal">
                 <button className="px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black text-lg flex items-center gap-3 shadow-2xl shadow-primary/30 hover:scale-105 transition-transform group">
                   Get Started Free
@@ -125,7 +149,7 @@ function LandingPage() {
                   />
                 </button>
               </SignInButton>
-            </motion.div>
+            </div>
           </div>
 
           <motion.div
@@ -240,7 +264,7 @@ function LandingPage() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -5 }}
-              className="p-8 rounded-[2.5rem] bg-card border border-border hover:shadow-2xl hover:border-primary/20 transition-all group"
+              className="feature-card p-8 rounded-[2.5rem] bg-card border border-border hover:shadow-2xl hover:border-primary/20 transition-all group"
             >
               <div
                 className={`w-14 h-14 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
@@ -332,7 +356,8 @@ function App() {
 
   return (
     <Layout currentView={view} setView={setView}>
-      {view === "dashboard" && <Dashboard />}
+      {view === "dashboard" && <Dashboard setView={setView} />}
+      {view === "budget" && <Budget />}
       {view === "add-entries" && <AddEntries />}
       {view === "settings" && <Settings />}
     </Layout>

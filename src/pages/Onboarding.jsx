@@ -35,16 +35,24 @@ export default function Onboarding() {
   const [banks, setBanks] = useState([]);
   const [newBank, setNewBank] = useState("");
   const [cards, setCards] = useState([]);
-  const [newCard, setNewCard] = useState({ name: "", bank: "" });
-  const [categories, setCategories] = useState(
-    PRESET_CATEGORIES.map((c) => c.name)
-  );
+  const [categories, setCategories] = useState([]);
+  const [newCard, setNewCard] = useState({
+    name: "",
+    bank: "",
+    type: "Credit",
+  });
 
   const handleFinish = async () => {
+    const sanitizedCards = cards.map(({ name, bank, type }) => ({
+      name,
+      bank,
+      type,
+    }));
+
     await updateSettings({
       userId: user.id,
       banks,
-      creditCards: cards,
+      creditCards: sanitizedCards,
       categories,
     });
   };
@@ -242,14 +250,24 @@ export default function Onboarding() {
                 <div className="grid grid-cols-1 gap-4">
                   <input
                     type="text"
-                    placeholder="Card Label (e.g. Visa Infinite)"
+                    placeholder="Card Label (e.g. My Shopping Card)"
                     value={newCard.name}
                     onChange={(e) =>
                       setNewCard({ ...newCard, name: e.target.value })
                     }
                     className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:ring-2 ring-primary/20 outline-none"
                   />
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      value={newCard.type}
+                      onChange={(e) =>
+                        setNewCard({ ...newCard, type: e.target.value })
+                      }
+                      className="flex-1 bg-secondary border border-border rounded-xl px-4 py-3 outline-none"
+                    >
+                      <option value="Credit">Credit Card</option>
+                      <option value="Debit">Debit Card</option>
+                    </select>
                     <select
                       value={newCard.bank}
                       onChange={(e) =>
@@ -264,31 +282,40 @@ export default function Onboarding() {
                         </option>
                       ))}
                     </select>
-                    <button
-                      onClick={() => {
-                        if (newCard.name && newCard.bank) {
-                          setCards([...cards, newCard]);
-                          setNewCard({ name: "", bank: "" });
-                        }
-                      }}
-                      className="bg-primary text-primary-foreground px-6 rounded-xl font-bold"
-                    >
-                      Link
-                    </button>
                   </div>
+                  <button
+                    onClick={() => {
+                      if (newCard.name && newCard.bank && newCard.type) {
+                        setCards([...cards, newCard]);
+                        setNewCard({
+                          name: "",
+                          bank: "",
+                          type: "Credit",
+                        });
+                      }
+                    }}
+                    className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
+                  >
+                    Link Card
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <AnimatePresence>
                     {cards.map((card, i) => (
                       <motion.div
-                        key={card.name}
+                        key={i}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="p-4 rounded-2xl bg-secondary border border-border flex justify-between group"
                       >
                         <div>
-                          <p className="font-bold">{card.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold">{card.name}</p>
+                            <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                              {card.type}
+                            </span>
+                          </div>
                           <p className="text-xs text-muted-foreground font-medium uppercase tracking-tighter">
                             {card.bank}
                           </p>
@@ -310,6 +337,21 @@ export default function Onboarding() {
 
             {step === 4 && (
               <div className="space-y-6">
+                <div className="bg-primary/5 border border-primary/20 p-5 rounded-3xl flex items-start gap-4">
+                  <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                    <Zap size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">
+                      Note: Customize your vault
+                    </h4>
+                    <p className="text-muted-foreground text-xs font-medium leading-relaxed">
+                      Tap the category cards below to include or exclude them
+                      from your tracker. Selected categories will be available
+                      when logging expenses.
+                    </p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {PRESET_CATEGORIES.map((cat) => {
                     const isSelected = categories.includes(cat.name);
